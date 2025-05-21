@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Voice Stat Sheet</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#ffffff" />
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin: 0; }
+    table {
+      width: 90%;
+      margin: 20px auto;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #333;
+      padding: 8px;
+      text-align: center;
+    }
+    .selected { background-color: #d0f0c0; }
+    #live-transcript { margin: 10px; font-style: italic; color: #555; }
+  </style>
+</head>
+<body>
+
+<h1>Voice Activated Stats</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th>Player</th><th>Kicks</th><th>Handballs</th><th>Marks</th><th>Tackles</th>
+    </tr>
+  </thead>
+  <tbody id="player-body"></tbody>
+</table>
+
+<div id="live-transcript">Listening...</div>
+
+<script>
+  const playerNames = [
+    "Harry", "Cruise", "Dante", "Evan", "Raf", "Atticus", "Flynn", "Oliver", "Tyson R", "Will",
+    "Tyson G", "Jordy", "Addison", "Liam", "Carson", "Prescott", "Toffee", "I can", "Tristan", "Massimo"
+  ];
+  let data = {};
+  playerNames.forEach(name => {
+    data[name.toLowerCase()] = { name, kick: 0, handball: 0, mark: 0, tackle: 0 };
+  });
+
+  let selectedPlayer = null;
+
+  function renderTable() {
+    const tbody = document.getElementById("player-body");
+    tbody.innerHTML = '';
+    for (let key in data) {
+      const p = data[key];
+      const row = document.createElement('tr');
+      if (key === selectedPlayer) row.classList.add("selected");
+      row.innerHTML = `<td>${p.name}</td><td>${p.kick}</td><td>${p.handball}</td><td>${p.mark}</td><td>${p.tackle}</td>`;
+      tbody.appendChild(row);
+    }
+  }
+
+  function processWords(words) {
+    for (let word of words) {
+      word = word.toLowerCase();
+      if (data[word]) {
+        selectedPlayer = word;
+      } else if (selectedPlayer) {
+        switch (word) {
+          case 'kick':
+            data[selectedPlayer].kick++;
+            break;
+          case 'hands':
+            data[selectedPlayer].handball++;
+            break;
+          case 'mark':
+            data[selectedPlayer].mark++;
+            break;
+          case 'tackle':
+            data[selectedPlayer].tackle++;
+            break;
+        }
+      }
+    }
+    renderTable();
+  }
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SpeechRecognition) {
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+
+    recognition.onresult = e => {
+      let transcript = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        transcript += e.results[i][0].transcript;
+      }
+      document.getElementById("live-transcript").textContent = `Heard: ${transcript}`;
+
+      const words = transcript.trim().toLowerCase().split(/\s+/);
+      processWords(words);
+    };
+
+    recognition.onerror = e => console.error("Speech error:", e.error);
+    recognition.onend = () => recognition.start();
+    recognition.start();
+  } else {
+    alert("Speech Recognition not supported. Use Safari or Chrome on iOS 14+.");
+  }
+
+  renderTable();
+</script>
+
+</body>
+</html>
